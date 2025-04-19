@@ -1,18 +1,27 @@
 # naiad.nvim
 
-a markdown-first neovim plugin for creative ideation and writing, with inline `[!...]` syntax triggers, ai-assisted reflection and interpretation using various providers like **ollama, openai, anthropic, and gemini**. like a naiad, it helps your writing flow.
+a markdown-first neovim plugin for creative ideation and writing, with inline `[!...]` syntax triggers, ai-assisted reflection and interpretation using providers like **ollama, openai, anthropic, and gemini**. like a naiad, it helps your writing flow.
 
 **important**: this plugin requires a compatible ai backend service (like `ollama serve` or access to a cloud provider api) to be running or accessible. it communicates via http requests.
+
+## what it is
+
+naiad.nvim is not a grammar checker, summarizer, or ghostwriter. you've got grammarly, chatgpt, and other tools for that.
+it doesn’t overwrite or “fix” your writing—it helps you *listen closer* to what it’s already saying.  
+it sharpens themes, interprets symbols, questions your assumptions, and mirrors your intent back at you, but cleaner, deeper.
+
+## core idea
+
+write freely. mark moments in your text that invite reflection, questions, or transformation using `[!your command]`.  
+naiad detects those triggers, infers what kind of help you’re asking for, and responds using a creative mode (like `interpret`, `socratic`, `style`, etc.) tailored to the prompt.
 
 ## features
 
 -   **inline triggers**: use `[!your command]` directly within your text.
--   **intelligent context**: automatically extracts surrounding text.
 -   **smart routing**: infers the best response mode (socratic, contrarian, associate, etc.) using an llm (currently via the configured provider).
--   **templated prompts**: applies tailored prompts for different creative assistance modes.
 -   **flexible display**: shows results as non-intrusive virtual text.
 -   **multi-provider backend**: supports ollama, openai, anthropic, gemini, and openai-compatible apis (like openrouter).
--   **focus on human excellence**: no grammar correction or overwriting, only aids in exploring and deepening ideas, bringing out the best in your writing.
+-   **focus on human excellence**: no grammar correction or slopification, only amplifies what you’ve already written.
 -   **syntax highlighting**: provides highlighting for `[!...]` blocks in `aidoc` filetypes.
 
 ## core interaction
@@ -25,6 +34,7 @@ a markdown-first neovim plugin for creative ideation and writing, with inline `[
 4.  it then formats a detailed prompt using the appropriate template for that type.
 5.  the final prompt is sent to the configured provider.
 6.  the result is displayed as virtual text below the line or inserted into the buffer.
+
 ## example
 below is an example of writing with various inline triggers in a document. italicized text is the ai-generated virtual text; i used gemma 3 12b for this example.
 ```markdown
@@ -72,6 +82,7 @@ the room beyond was–
 *maybe brief, almost clinical observation–*
 *a focus on textures, smells, the room's geometry.*
 ```
+
 ## installation
 
 **requires a configured and accessible ai provider backend.**

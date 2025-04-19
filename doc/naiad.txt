@@ -22,11 +22,6 @@ writing. It uses inline `[!...]` syntax triggers to invoke AI assistance for
 reflection, interpretation, and continuation, focusing on thought refinement
 rather than simple rewriting.
 
-It communicates with a running Ollama instance via its HTTP API.
-
-Inspired by focused writing tools and Zettelkasten methods, it aims to blend
-minimalism with powerful, context-aware AI prompts to aid the creative process.
-
 ==============================================================================
 REQUIREMENTS                                           *naiad-requirements*
 
