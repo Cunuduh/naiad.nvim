@@ -143,8 +143,10 @@ require('naiad').setup({
 1.  ensure your chosen ai provider backend (e.g., `ollama serve`, or cloud service) is accessible.
 2.  set the filetype of your markdown document to `aidoc` (`:set ft=aidoc`).
 3.  write text and include triggers like `[!some command]`.
-4.  on the trigger line, press `<leader>ai` (default mapping for `aidoc`), or use the command `:AIPromptTrigger`.
+4.  on the trigger line, press `<leader>ai` (default mapping for `aidoc`), or use the command `:AIPromptTrigger`. to queue multiple triggers, visually select a block of text and run the same command.
+    - if using visual selection, the selected text becomes the context, and **all** `[!...]` triggers found within the selection are processed sequentially from bottom to top.
+    - otherwise, the trigger on the current line is used, along with the configured number of surrounding context lines.
 5.  view the virtual text result.
-6.  use `<leader>ac` or `:AIClearVirtuals` to clear virtual text.
+6.  use `<leader>ac` or `:AIClearVirtuals` to clear virtual text in a selected range.
 
 see `:help naiad` for detailed documentation.

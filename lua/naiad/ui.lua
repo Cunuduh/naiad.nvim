@@ -76,15 +76,29 @@ function M.show_virtual_text(line_nr, text)
   end
 end
 
----@brief Clears all virtual texts and loading indicators created by this plugin.
-function M.clear_virtuals()
+---@brief Clears virtual texts and loading indicators created by this plugin.
+---@param start_line? integer The starting line number (1-based) of the range.
+---@param end_line? integer The ending line number (1-based) of the range.
+function M.clear_virtuals(start_line, end_line)
   local buf_nr = vim.api.nvim_get_current_buf()
 
-  vim.api.nvim_buf_clear_namespace(buf_nr, namespace_id, 0, -1)
-  current_virtual_texts[buf_nr] = {}
-  active_loading_indicators[buf_nr] = {}
+  if start_line and end_line then
+    local start_line_0 = start_line - 1
+    local end_line_0 = end_line - 1
+    vim.api.nvim_buf_clear_namespace(buf_nr, namespace_id, start_line_0, end_line_0 + 1)
 
-  vim.notify('naiad: cleared virtual text and indicators.', vim.log.levels.INFO)
+    if current_virtual_texts[buf_nr] then
+      for line = start_line_0, end_line_0 do
+        current_virtual_texts[buf_nr][line] = nil
+      end
+    end
+    if active_loading_indicators[buf_nr] then
+      for line = start_line_0, end_line_0 do
+        active_loading_indicators[buf_nr][line] = nil
+      end
+    end
+    vim.notify('naiad: cleared virtual text in range ' .. start_line .. '-' .. end_line .. '.', vim.log.levels.info)
+  end
 end
 
 vim.api.nvim_create_autocmd({'BufHidden', 'BufDelete'}, {
