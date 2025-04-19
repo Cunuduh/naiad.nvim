@@ -1,0 +1,169 @@
+*naiad.txt*	Neovim AI Writer Plugin Help
+
+==============================================================================
+CONTENTS                                                   *naiad-contents*
+
+1. Introduction..........................................|naiad-introduction|
+2. Requirements..........................................|naiad-requirements|
+3. Usage.......................................................|naiad-usage|
+   - Triggering Prompts................................|naiad-triggering|
+   - Response Modes....................................|naiad-response-modes|
+   - Display Modes.....................................|naiad-display-modes|
+4. Commands..................................................|naiad-commands|
+5. Configuration.........................................|naiad-configuration|
+6. Syntax Highlighting.......................................|naiad-syntax|
+7. Troubleshooting.....................................|naiad-troubleshooting|
+
+==============================================================================
+INTRODUCTION                                           *naiad-introduction*
+
+`naiad.nvim` is a markdown-first Neovim plugin for creative ideation and
+writing. It uses inline `[!...]` syntax triggers to invoke AI assistance for
+reflection, interpretation, and continuation, focusing on thought refinement
+rather than simple rewriting.
+
+It communicates with a running Ollama instance via its HTTP API.
+
+Inspired by focused writing tools and Zettelkasten methods, it aims to blend
+minimalism with powerful, context-aware AI prompts to aid the creative process.
+
+==============================================================================
+REQUIREMENTS                                           *naiad-requirements*
+
+- **Neovim**: Version 0.7 or later recommended.
+- **Ollama**: Must be installed and running in server mode (`ollama serve`).
+- **plenary.nvim**: Required dependency for HTTP requests.
+- **curl**: (Implicitly used by plenary.curl, usually available).
+
+==============================================================================
+USAGE                                                          *naiad-usage*
+
+------------------------------------------------------------------------------
+Triggering Prompts                                       *naiad-triggering*
+
+Place your cursor on a line containing an AI trigger, formatted as `[!command]`,
+where `command` is your specific request or question for the AI. Alternatively,
+**visually select a block of text** containing one or more triggers.
+
+Then, execute the |:AIPromptTrigger| command (default mapping `<leader>ai` in
+`aidoc` files).
+
+Example (Cursor on line):
+> The character felt lost. [!explore the symbolism of being lost]
+
+Example (Visual Selection):
+```
+<selection start>
+Some preceding text.
+[!analyze the tone]
+More text within the selection.
+[!another trigger to process]
+<selection end>
+```
+
+If a visual selection is active:
+- The **entire selected text** becomes the context.
+- **All** `[!...]` triggers found within the selection are processed sequentially, from bottom to top.
+- The `context_lines_before` and `context_lines_after` settings are ignored.
+
+If no visual selection is active:
+- The plugin extracts the command from the `[!...]` on the current line.
+- The surrounding text context (configurable number of lines before/after) is used.
+
+In both cases, the command(s) and context are sent to your running Ollama instance.
+
+------------------------------------------------------------------------------
+Response Modes                                       *naiad-response-modes*
+
+The plugin intelligently infers the best way to respond based on your command
+and context. Supported modes include:
+
+- *socratic*: Asks exploratory questions.
+- *contrarian*: Provides a counterpoint.
+- *associate*: Suggests symbolic/metaphoric links.
+- *style*: Offers tone/inflection suggestions.
+- *interpret*: Gives symbolic/literary analysis.
+- *emotion*: Explores internal emotional states.
+
+The AI backend (Ollama) first determines the mode via an initial API call, then
+generates a response using a template specific to that mode via a second API call.
+
+------------------------------------------------------------------------------
+Display Modes                                         *naiad-display-modes*
+
+by default, the ai's response appears as virtual text below the trigger line,
+without modifying the buffer. use |:aiclearvirtuals| (default `<leader>ac`)
+to **manually** remove these annotations. virtual text is **not** cleared
+automatically.
+
+==============================================================================
+COMMANDS                                                   *naiad-commands*
+
+*:aiprompttrigger*
+    triggers the ai prompt based on the `[!...]` block on the current line or
+    within a visual selection. sends requests to the configured ollama api
+    endpoint.
+
+*:aiclearvirtuals*
+    removes all ai-generated virtual text annotations from the current buffer.
+
+==============================================================================
+CONFIGURATION                                        *naiad-configuration*
+
+Configure `naiad.nvim` by passing a table to the `setup()` function,
+typically in your `init.lua` or a dedicated plugin configuration file.
+
+The plugin uses Ollama's HTTP API as its backend. Ensure `ollama serve` is
+running in a separate terminal before using the plugin.
+
+Example:
+```lua
+require('naiad').setup({
+  provider = 'openai', -- e.g., 'ollama', 'openai', 'anthropic', 'gemini'. Use 'openai' for compatible APIs like OpenRouter.
+  model = 'gpt-4.1', -- model name for the chosen provider
+  api_key = os.getenv('OPENAI_API_KEY'), -- example: read from environment variable
+  base_url = 'https://openrouter.ai/api/v1', -- optional: override default provider URL
+  context_lines_before = 10,
+  context_lines_after = 5,
+  request_timeout = 30000, -- in milliseconds
+  max_tokens = 1024,
+})
+```
+
+Default values:
+| Option                | Default                   | Description                                         |
+|-----------------------|---------------------------|-----------------------------------------------------|
+| `provider`            | `'ollama'`                | AI provider to use.                                |
+| `model`               | `'gemma3:12b'`            | Model name for the provider.                        |
+| `api_key`             | `nil`                     | API key (required for non-ollama providers).        |
+| `base_url`            | provider-specific         | Base URL for API requests.                          |
+| `context_lines_before`| `10`                      | Lines of context before the trigger line.           |
+| `context_lines_after` | `5`                       | Lines of context after the trigger line.            |
+| `request_timeout`     | `30000`                   | Timeout for API requests in milliseconds.           |
+| `max_tokens`          | `1024`                    | Max tokens for response generation.                 |
+
+==============================================================================
+SYNTAX HIGHLIGHTING                                          *naiad-syntax*
+
+The plugin includes syntax highlighting for files with the `aidoc` filetype.
+It highlights the `[!...]` trigger blocks. To use it, set the filetype for
+your markdown files intended for use with this plugin:
+
+`:set filetype=aidoc`
+
+Or use modelines:
+`<!-- vim: set ft=aidoc : -->`
+
+The `ftplugin/aidoc.vim` file automatically sets up the default keymaps
+`<leader>ai` and `<leader>ac` for `aidoc` buffers.
+
+==============================================================================
+TROUBLESHOOTING                                     *naiad-troubleshooting*
+
+- *No response / API error*: Ensure your chosen provider backend (e.g., `ollama serve`) is running and accessible. Check the configured `base_url` if overriding the default URLs, and `api_key` for non-ollama providers. Check `:messages` for HTTP status codes or JSON parsing errors. Verify the model name specified in `model` is available for your provider.
+- *Virtual text not appearing*: Ensure `display_mode` is `'virtual_text'`. Check for errors in `:messages`.
+- *Incorrect response type*: The router prompt might need tuning for your specific use cases or the Ollama model you are using.
+- *Keymaps not working*: Ensure the filetype is set to `aidoc` or map the commands globally in your Neovim config.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
