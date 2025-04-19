@@ -103,6 +103,10 @@ function M.handle_trigger(start_line, end_line)
 
   local buf_nr = vim.api.nvim_get_current_buf()
 
+  for _, trigger in ipairs(triggers) do
+    ui.show_loading_indicator(trigger.line_nr - 1, 'queueing...')
+  end
+
   local function process_trigger(index)
     if index > #triggers then
       return

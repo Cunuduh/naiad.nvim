@@ -15,7 +15,7 @@ Based on this command and its context, determine the single best response type f
 5. "interpret" - offer literary interpretation of symbols or meaning
 6. "emotion" - explore emotional depth or motivations
 
-Respond with ONLY the type name in lowercase. No explanation or other text.]]
+Respond with ONLY the type name in lowercase. NO explanation or other text. NO punctuation, no quotes, no extra spaces.]]
 
 ---@brief Determines the response type using the backend.
 ---@param command string The user's command from [!...].
@@ -30,11 +30,17 @@ function M.get_response_type(command, context, callback)
         socratic = true, contrarian = true, associate = true,
         style = true, interpret = true, emotion = true,
       }
-      local clean_result = result:match('^%s*(%w+)%s*$')
-      if clean_result and valid_types[clean_result] then
-        callback(clean_result)
+      local clean_result = result:match('^%s*"?([%w_]+)"?%s*%.?$')
+      if clean_result then
+        clean_result = clean_result:lower()
+        if valid_types[clean_result] then
+          callback(clean_result)
+        else
+          vim.notify('naiad: router received invalid type: ' .. result, vim.log.levels.WARN)
+          callback(nil)
+        end
       else
-        vim.notify('naiad: router received invalid type: ' .. result, vim.log.levels.WARN)
+        vim.notify('naiad: router could not parse type from: ' .. result, vim.log.levels.WARN)
         callback(nil)
       end
     else
