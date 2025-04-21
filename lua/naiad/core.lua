@@ -17,7 +17,7 @@ local M = {}
 ---@brief Extracts commands and context, prioritizing visual selection range if provided.
 ---@param start_line integer? The starting line number of a visual selection (1-based).
 ---@param end_line integer? The ending line number of a visual selection (1-based).
----@return table[]? triggers A list of { command: string, line_nr: integer } sorted bottom-up.
+---@return table[]? triggers A list of { command: string, line_nr: integer, has_response: boolean } sorted bottom-up.
 ---@return string[]? context_lines Raw lines of the context block.
 ---@return integer? context_start_line 1-based line number of the first line in context_lines.
 local function find_triggers_and_context(start_line, end_line)
@@ -39,7 +39,10 @@ local function find_triggers_and_context(start_line, end_line)
     for i, line_text in ipairs(context_lines) do
       local trigger_start, _, found_command = line_text:find('%[%!(.-)%]')
       if trigger_start then
-        table.insert(triggers, { command = found_command, line_nr = context_start_line + i - 1 })
+        local current_line_nr = context_start_line + i - 1
+        local display_line_nr = current_line_nr - 1 -- 0-based for ui functions
+        local has_response = ui.does_virtual_text_exist(buf_nr, display_line_nr)
+        table.insert(triggers, { command = found_command, line_nr = current_line_nr, has_response = has_response })
       end
     end
 
@@ -67,7 +70,8 @@ local function find_triggers_and_context(start_line, end_line)
     local ctx_end = math.min(vim.api.nvim_buf_line_count(buf_nr), current_line_nr + config.options.context_lines_after)
     context_start_line = ctx_start + 1
     context_lines = vim.api.nvim_buf_get_lines(buf_nr, ctx_start, ctx_end, false)
-    table.insert(triggers, { command = found_command, line_nr = current_line_nr })
+    local has_response = ui.does_virtual_text_exist(buf_nr, current_line_nr - 1)
+    table.insert(triggers, { command = found_command, line_nr = current_line_nr, has_response = has_response })
   end
 
   return triggers, context_lines, context_start_line
@@ -96,23 +100,32 @@ end
 ---@param start_line integer? The starting line number of a visual selection (1-based).
 ---@param end_line integer? The ending line number of a visual selection (1-based).
 function M.handle_trigger(start_line, end_line)
-  local triggers, context_lines, context_start_line = find_triggers_and_context(start_line, end_line)
-  if not triggers or not context_lines or not context_start_line or #triggers == 0 then
+  local all_triggers, context_lines, context_start_line = find_triggers_and_context(start_line, end_line)
+  if not all_triggers or not context_lines or not context_start_line or #all_triggers == 0 then
     return
   end
 
   local buf_nr = vim.api.nvim_get_current_buf()
 
-  for _, trigger in ipairs(triggers) do
-    ui.show_loading_indicator(trigger.line_nr - 1, 'queueing...')
+  local triggers_to_process = {}
+  for _, trigger in ipairs(all_triggers) do
+    if not trigger.has_response then
+      table.insert(triggers_to_process, trigger)
+      ui.show_loading_indicator(trigger.line_nr - 1, 'queueing...')
+    end
+  end
+
+  if #triggers_to_process == 0 then
+     vim.notify('naiad: all triggers in selection already have responses.', vim.log.levels.INFO)
+     return
   end
 
   local function process_trigger(index)
-    if index > #triggers then
+    if index > #triggers_to_process then
       return
     end
 
-    local current_trigger = triggers[index]
+    local current_trigger = triggers_to_process[index]
     local command = current_trigger.command
     local line_nr = current_trigger.line_nr
     local display_line_nr = line_nr - 1

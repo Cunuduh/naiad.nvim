@@ -4,13 +4,24 @@ local namespace_id = vim.api.nvim_create_namespace('naiad_virtual_text')
 local current_virtual_texts = {} -- { buf_nr = { line_nr = extmark_id } }
 local active_loading_indicators = {} -- { buf_nr = { line_nr = extmark_id } }
 
+---@brief Hides the virtual text for a specific line.
+---@param buf_nr integer
+---@param line_nr integer The line number (0-based).
+function M.hide_virtual_text(buf_nr, line_nr)
+  if current_virtual_texts[buf_nr] and current_virtual_texts[buf_nr][line_nr] then
+    local extmark_id = current_virtual_texts[buf_nr][line_nr]
+    pcall(vim.api.nvim_buf_del_extmark, buf_nr, namespace_id, extmark_id)
+    current_virtual_texts[buf_nr][line_nr] = nil
+  end
+end
+
 ---@brief Hides the loading indicator for a specific line.
 ---@param buf_nr integer
 ---@param line_nr integer The line number (0-based).
 function M.hide_loading_indicator(buf_nr, line_nr)
   if active_loading_indicators[buf_nr] and active_loading_indicators[buf_nr][line_nr] then
     local extmark_id = active_loading_indicators[buf_nr][line_nr]
-    vim.api.nvim_buf_del_extmark(buf_nr, namespace_id, extmark_id)
+    pcall(vim.api.nvim_buf_del_extmark, buf_nr, namespace_id, extmark_id)
     active_loading_indicators[buf_nr][line_nr] = nil
   end
 end
@@ -21,14 +32,8 @@ end
 function M.show_loading_indicator(line_nr, text)
   local buf_nr = vim.api.nvim_get_current_buf()
 
-  if current_virtual_texts[buf_nr] and current_virtual_texts[buf_nr][line_nr] then
-    vim.api.nvim_buf_del_extmark(buf_nr, namespace_id, current_virtual_texts[buf_nr][line_nr])
-    current_virtual_texts[buf_nr][line_nr] = nil
-  end
-  if active_loading_indicators[buf_nr] and active_loading_indicators[buf_nr][line_nr] then
-     vim.api.nvim_buf_del_extmark(buf_nr, namespace_id, active_loading_indicators[buf_nr][line_nr])
-     active_loading_indicators[buf_nr][line_nr] = nil
-  end
+  M.hide_virtual_text(buf_nr, line_nr)
+  M.hide_loading_indicator(buf_nr, line_nr)
 
   local loading_text = text or 'loading...'
   local extmark_id = vim.api.nvim_buf_set_extmark(buf_nr, namespace_id, line_nr, 0, {
@@ -49,13 +54,8 @@ end
 ---@param text string The text content to display.
 function M.show_virtual_text(line_nr, text)
   local buf_nr = vim.api.nvim_get_current_buf()
-
+  M.hide_virtual_text(buf_nr, line_nr)
   M.hide_loading_indicator(buf_nr, line_nr)
-
-  if current_virtual_texts[buf_nr] and current_virtual_texts[buf_nr][line_nr] then
-    vim.api.nvim_buf_del_extmark(buf_nr, namespace_id, current_virtual_texts[buf_nr][line_nr])
-    current_virtual_texts[buf_nr][line_nr] = nil
-  end
 
   local lines = vim.split(text, '\n', { trimempty = true })
   local virt_lines_data = {}
@@ -67,7 +67,7 @@ function M.show_virtual_text(line_nr, text)
     local extmark_id = vim.api.nvim_buf_set_extmark(buf_nr, namespace_id, line_nr, 0, {
       virt_lines = virt_lines_data,
       hl_mode = 'combine',
-          })
+    })
 
     if not current_virtual_texts[buf_nr] then
       current_virtual_texts[buf_nr] = {}
@@ -97,8 +97,21 @@ function M.clear_virtuals(start_line, end_line)
         active_loading_indicators[buf_nr][line] = nil
       end
     end
-    vim.notify('naiad: cleared virtual text in range ' .. start_line .. '-' .. end_line .. '.', vim.log.levels.info)
+    vim.notify('naiad: cleared virtual text in range ' .. start_line .. '-' .. end_line .. '.', vim.log.levels.INFO)
   end
+end
+
+---@brief Checks if virtual text managed by naiad exists for a specific line.
+---@param buf_nr integer The buffer number.
+---@param line_nr integer The line number (0-based).
+---@return boolean True if virtual text exists, false otherwise.
+function M.does_virtual_text_exist(buf_nr, line_nr)
+  if current_virtual_texts[buf_nr] and current_virtual_texts[buf_nr][line_nr] then
+    local extmark_id = current_virtual_texts[buf_nr][line_nr]
+    local extmark_info = vim.api.nvim_buf_get_extmark_by_id(buf_nr, namespace_id, extmark_id, {})
+    return extmark_info ~= nil and type(extmark_info) == 'table' and #extmark_info > 0
+  end
+  return false
 end
 
 vim.api.nvim_create_autocmd({'BufHidden', 'BufDelete'}, {
